@@ -12,17 +12,21 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import WeatherCard from "@/components/dashboard/WeatherCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import LiveCameraMonitoring from "@/components/dashboard/LiveCameraMonitoring";
+import HardwareTelemetryPanel from "@/components/dashboard/HardwareTelemetryPanel";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { iotService } from "@/services/iotService";
+import { IotTelemetryData } from "@/types/iot";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<{ name: string } | null>(null);
   const [greeting, setGreeting] = useState("Welcome Back");
+  const [telemetry, setTelemetry] = useState<IotTelemetryData | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const docSnap = await getDoc(doc(db, "users", user.uid));
@@ -37,6 +41,10 @@ export default function Dashboard() {
       }
     });
 
+    const unsubscribeIot = iotService.subscribeToTelemetry("esp32_zone_01", (data) => {
+      setTelemetry(data);
+    });
+
     const hours = new Date().getHours();
     if (hours < 12) {
       setGreeting("Good Morning");
@@ -46,7 +54,10 @@ export default function Dashboard() {
       setGreeting("Good Evening");
     }
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      unsubscribeIot();
+    };
   }, []);
 
   return (
@@ -68,12 +79,12 @@ export default function Dashboard() {
         />
         <StatCard
           title="Water Tank"
-          value="82%"
+          value={telemetry ? `${telemetry.waterTankLevel}%` : "82%"}
           icon={Droplets}
         />
         <StatCard
           title="Temperature"
-          value="29°C"
+          value={telemetry ? `${telemetry.temperature}°C` : "29°C"}
           icon={Thermometer}
         />
         <StatCard
@@ -82,6 +93,9 @@ export default function Dashboard() {
           icon={Brain}
         />
       </div>
+
+      {/* Hardware Telemetry (ESP32 Data Pipeline) */}
+      <HardwareTelemetryPanel />
 
       {/* Live Camera Monitoring Section */}
       <LiveCameraMonitoring />
