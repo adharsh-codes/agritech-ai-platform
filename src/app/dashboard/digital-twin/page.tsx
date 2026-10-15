@@ -78,7 +78,7 @@ export default function DigitalTwinPage() {
       <ProtectedRoute>
         <main className="max-w-6xl mx-auto py-20 px-6 text-center text-gray-400 space-y-4">
           <div className="w-10 h-10 border-4 border-green-700 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-sm font-semibold">Loading Virtual Twin replica...</p>
+          <p className="text-base font-semibold">Loading Twin</p>
         </main>
       </ProtectedRoute>
     );
@@ -94,9 +94,6 @@ export default function DigitalTwinPage() {
             </div>
             <div className="space-y-2">
               <h3 className="font-extrabold text-xl text-gray-800">No Digital Twin Generated</h3>
-              <p className="text-sm">
-                A Digital Twin replicates your specific terrace geometry. Please run an AI Terrace Analysis first to automatically generate your virtual layout blueprint.
-              </p>
             </div>
             <Link href="/dashboard/terrace-planner" className="inline-block">
               <Button className="bg-green-700 hover:bg-green-800 text-white rounded-xl font-bold px-8 py-4 cursor-pointer">
@@ -163,9 +160,6 @@ function DigitalTwinPageContent({ uid, onRefresh }: DigitalTwinPageContentProps)
             <Layers className="text-green-700 animate-pulse" size={32} />
             <span>{t("digitalTwin") || "AI Digital Twin"}</span>
           </h1>
-          <p className="text-gray-500 mt-2 text-sm max-w-2xl">
-            Monitor, audit, and plan your urban terrace garden using our top-view 2D virtual replication.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

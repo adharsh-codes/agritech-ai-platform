@@ -10,7 +10,7 @@ export default function Sidebar() {
     <aside className="hidden lg:block w-64 bg-green-700 text-white min-h-screen p-6 shrink-0">
       <h2 className="text-2xl font-bold mb-10">🌱 AgriTech AI</h2>
 
-      <nav className="space-y-5">
+      <nav className="space-y-5 text-base font-semibold">
         <Link href="/dashboard" className="block hover:text-green-200">
           {t("dashboard")}
         </Link>

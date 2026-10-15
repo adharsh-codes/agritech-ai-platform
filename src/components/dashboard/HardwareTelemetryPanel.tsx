@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { 
   IotTelemetryData, 
-  FarmingMode,
   deriveDeviceStatus, 
   deriveMoistureStatus, 
   derivePhStatus,
-  deriveEcStatus,
   deriveWaterLevelStatus,
   DerivedDeviceStatus 
 } from "@/types/iot";
@@ -20,10 +18,6 @@ import {
   Wind, 
   Gauge, 
   Activity, 
-  Play, 
-  Square, 
-  RefreshCw, 
-  Sliders, 
   Wifi, 
   WifiOff,
   FlaskConical,
@@ -37,32 +31,6 @@ export default function HardwareTelemetryPanel() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("esp32_zone_01");
   const [activeTelemetry, setActiveTelemetry] = useState<IotTelemetryData | null>(null);
   
-  // Simulator drawer states
-  const [showSimulator, setShowSimulator] = useState<boolean>(false);
-  const [isAutoSimulating, setIsAutoSimulating] = useState<boolean>(false);
-  
-  // Simulator mode
-  const [simMode, setSimMode] = useState<FarmingMode>("soil");
-
-  // Soil simulator states
-  const [simMoisture, setSimMoisture] = useState<number>(55);
-  const [simTank, setSimTank] = useState<number>(85);
-  
-  // Hydroponics simulator states
-  const [simPh, setSimPh] = useState<number>(6.2);
-  const [simEc, setSimEc] = useState<number>(1.4);
-  const [simTds, setSimTds] = useState<number>(700);
-  const [simWaterTemp, setSimWaterTemp] = useState<number>(23.5);
-  const [simWaterLevel, setSimWaterLevel] = useState<number>(78);
-
-  // Shared environmental simulator states
-  const [simTemp, setSimTemp] = useState<number>(27);
-  const [simHumidity, setSimHumidity] = useState<number>(62);
-  const [simLux, setSimLux] = useState<number>(1400);
-  
-  const [isPushing, setIsPushing] = useState<boolean>(false);
-  const autoSimIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   // Subscribe to all telemetry devices
   useEffect(() => {
     const unsubAll = iotService.subscribeToAllTelemetry((allDevices) => {
@@ -87,121 +55,12 @@ export default function HardwareTelemetryPanel() {
     };
   }, [selectedDeviceId]);
 
-  // Handle Auto Simulation loop
-  useEffect(() => {
-    if (isAutoSimulating) {
-      autoSimIntervalRef.current = setInterval(() => {
-        const isHydro = simMode === "hydroponics" || selectedDeviceId.toLowerCase().includes("hydro");
-
-        if (isHydro) {
-          const nextPh = Math.min(8.5, Math.max(4.5, Math.round((simPh + (Math.random() * 0.2 - 0.1)) * 10) / 10));
-          const nextEc = Math.min(3.0, Math.max(0.6, Math.round((simEc + (Math.random() * 0.1 - 0.05)) * 10) / 10));
-          const nextTds = Math.round(nextEc * 500);
-          const nextWaterTemp = Math.min(30, Math.max(16, Math.round((simWaterTemp + (Math.random() * 0.4 - 0.2)) * 10) / 10));
-          const nextWaterLevel = Math.min(100, Math.max(10, simWaterLevel - (Math.random() > 0.8 ? 1 : 0)));
-          const nextTemp = Math.min(42, Math.max(18, simTemp + Math.floor(Math.random() * 3 - 1)));
-          const nextHumidity = Math.min(95, Math.max(30, simHumidity + Math.floor(Math.random() * 5 - 2)));
-          const nextLux = Math.min(25000, Math.max(1000, simLux + Math.floor(Math.random() * 500 - 250)));
-
-          setSimPh(nextPh);
-          setSimEc(nextEc);
-          setSimTds(nextTds);
-          setSimWaterTemp(nextWaterTemp);
-          setSimWaterLevel(nextWaterLevel);
-          setSimTemp(nextTemp);
-          setSimHumidity(nextHumidity);
-          setSimLux(nextLux);
-
-          iotService.simulateTelemetryPush(selectedDeviceId, {
-            farmingMode: "hydroponics",
-            ph: nextPh,
-            ec: nextEc,
-            tds: nextTds,
-            waterTemperature: nextWaterTemp,
-            waterLevel: nextWaterLevel,
-            temperature: nextTemp,
-            humidity: nextHumidity,
-            lightLux: nextLux,
-          }).catch((err) => console.error("Auto hydroponics push failed:", err));
-        } else {
-          const nextMoisture = Math.min(100, Math.max(10, simMoisture + Math.floor(Math.random() * 5 - 2)));
-          const nextTank = Math.min(100, Math.max(5, simTank - (Math.random() > 0.7 ? 1 : 0)));
-          const nextTemp = Math.min(45, Math.max(15, simTemp + Math.floor(Math.random() * 3 - 1)));
-          const nextHumidity = Math.min(95, Math.max(30, simHumidity + Math.floor(Math.random() * 5 - 2)));
-          const nextLux = Math.min(5000, Math.max(100, simLux + Math.floor(Math.random() * 100 - 50)));
-
-          setSimMoisture(nextMoisture);
-          setSimTank(nextTank);
-          setSimTemp(nextTemp);
-          setSimHumidity(nextHumidity);
-          setSimLux(nextLux);
-
-          iotService.simulateTelemetryPush(selectedDeviceId, {
-            farmingMode: "soil",
-            soilMoisture: nextMoisture,
-            waterTankLevel: nextTank,
-            temperature: nextTemp,
-            humidity: nextHumidity,
-            lightLux: nextLux,
-          }).catch((err) => console.error("Auto soil push failed:", err));
-        }
-      }, 4000);
-    } else {
-      if (autoSimIntervalRef.current) {
-        clearInterval(autoSimIntervalRef.current);
-        autoSimIntervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (autoSimIntervalRef.current) {
-        clearInterval(autoSimIntervalRef.current);
-        autoSimIntervalRef.current = null;
-      }
-    };
-  }, [isAutoSimulating, selectedDeviceId, simMode, simPh, simEc, simTds, simWaterTemp, simWaterLevel, simMoisture, simTank, simTemp, simHumidity, simLux]);
-
-  const handleManualPush = async () => {
-    setIsPushing(true);
-    const isHydro = simMode === "hydroponics" || selectedDeviceId.toLowerCase().includes("hydro");
-
-    try {
-      if (isHydro) {
-        await iotService.simulateTelemetryPush(selectedDeviceId, {
-          farmingMode: "hydroponics",
-          ph: simPh,
-          ec: simEc,
-          tds: simTds,
-          waterTemperature: simWaterTemp,
-          waterLevel: simWaterLevel,
-          temperature: simTemp,
-          humidity: simHumidity,
-          lightLux: simLux,
-        });
-      } else {
-        await iotService.simulateTelemetryPush(selectedDeviceId, {
-          farmingMode: "soil",
-          soilMoisture: simMoisture,
-          waterTankLevel: simTank,
-          temperature: simTemp,
-          humidity: simHumidity,
-          lightLux: simLux,
-        });
-      }
-    } catch (err) {
-      console.error("Manual simulator push failed:", err);
-    } finally {
-      setIsPushing(false);
-    }
-  };
-
   const currentStatus: DerivedDeviceStatus = deriveDeviceStatus(activeTelemetry);
-  const activeFarmingMode: FarmingMode = activeTelemetry?.farmingMode || (selectedDeviceId.toLowerCase().includes("hydro") ? "hydroponics" : "soil");
+  const activeFarmingMode = activeTelemetry?.farmingMode || (selectedDeviceId.toLowerCase().includes("hydro") ? "hydroponics" : "soil");
 
   // Status Badge derivations
   const moistureStatus = activeTelemetry ? (activeTelemetry.soilMoistureStatus || deriveMoistureStatus(activeTelemetry.soilMoisture ?? 50)) : "optimal";
   const phStatus = activeTelemetry ? (activeTelemetry.phStatus || derivePhStatus(activeTelemetry.ph ?? 6.2)) : "optimal";
-  const ecStatus = activeTelemetry ? (activeTelemetry.ecStatus || deriveEcStatus(activeTelemetry.ec ?? 1.4)) : "optimal";
   const waterLevelStatus = activeTelemetry ? (activeTelemetry.waterLevelStatus || deriveWaterLevelStatus(activeTelemetry.waterLevel ?? 80)) : "optimal";
 
   const defaultDevices = [
@@ -272,18 +131,7 @@ export default function HardwareTelemetryPanel() {
             </span>
           </div>
 
-          {/* Simulator Toggle Button */}
-          <button
-            onClick={() => setShowSimulator(!showSimulator)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors ${
-              showSimulator
-                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                : "bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>ESP32 Simulator</span>
-          </button>
+
         </div>
       </div>
 
@@ -299,7 +147,6 @@ export default function HardwareTelemetryPanel() {
               key={dev.id}
               onClick={() => {
                 setSelectedDeviceId(dev.id);
-                setSimMode(dev.mode as FarmingMode);
               }}
               className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                 isSelected
@@ -529,258 +376,7 @@ export default function HardwareTelemetryPanel() {
         </span>
       </div>
 
-      {/* Simulator Control Drawer */}
-      {showSimulator && (
-        <div className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-900/50 pb-3">
-            <div className="flex items-center space-x-3">
-              <Sliders className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
-                ESP32 Hardware Telemetry Simulator
-              </h3>
 
-              {/* Mode Toggle Selector */}
-              <div className="flex items-center bg-gray-200 dark:bg-gray-700 p-0.5 rounded-lg text-xs">
-                <button
-                  onClick={() => {
-                    setSimMode("soil");
-                    if (selectedDeviceId.includes("hydro")) setSelectedDeviceId("esp32_zone_01");
-                  }}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                    simMode === "soil" ? "bg-white text-emerald-700 shadow-sm" : "text-gray-600 dark:text-gray-300"
-                  }`}
-                >
-                  🌱 Soil Mode
-                </button>
-                <button
-                  onClick={() => {
-                    setSimMode("hydroponics");
-                    if (!selectedDeviceId.includes("hydro")) setSelectedDeviceId("hydro_zone_01");
-                  }}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                    simMode === "hydroponics" ? "bg-white text-cyan-700 shadow-sm" : "text-gray-600 dark:text-gray-300"
-                  }`}
-                >
-                  🧪 Hydroponics Mode
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setIsAutoSimulating(!isAutoSimulating)}
-                className={`flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                  isAutoSimulating
-                    ? "bg-red-600 text-white"
-                    : "bg-indigo-600 text-white hover:bg-indigo-700"
-                }`}
-              >
-                {isAutoSimulating ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                <span>{isAutoSimulating ? "Stop Auto Stream" : "Start Auto Stream (4s)"}</span>
-              </button>
-            </div>
-          </div>
-
-          {simMode === "hydroponics" ? (
-            /* HYDROPONICS SIMULATOR SLIDERS */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Water Level: <span className="font-bold text-cyan-600">{simWaterLevel}%</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={simWaterLevel}
-                  onChange={(e) => setSimWaterLevel(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  pH: <span className="font-bold text-purple-600">{simPh}</span>
-                </label>
-                <input
-                  type="range"
-                  min="4.0"
-                  max="9.0"
-                  step="0.1"
-                  value={simPh}
-                  onChange={(e) => setSimPh(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  EC: <span className="font-bold text-amber-600">{simEc} mS/cm</span>
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="3.5"
-                  step="0.1"
-                  value={simEc}
-                  onChange={(e) => {
-                    const ecVal = Number(e.target.value);
-                    setSimEc(ecVal);
-                    setSimTds(Math.round(ecVal * 500));
-                  }}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Water Temp: <span className="font-bold text-blue-600">{simWaterTemp}°C</span>
-                </label>
-                <input
-                  type="range"
-                  min="15"
-                  max="35"
-                  step="0.5"
-                  value={simWaterTemp}
-                  onChange={(e) => setSimWaterTemp(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Air Temp: <span className="font-bold text-indigo-600">{simTemp}°C</span>
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="45"
-                  value={simTemp}
-                  onChange={(e) => setSimTemp(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Air Humidity: <span className="font-bold text-indigo-600">{simHumidity}%</span>
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="95"
-                  value={simHumidity}
-                  onChange={(e) => setSimHumidity(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Light: <span className="font-bold text-indigo-600">{simLux} lux</span>
-                </label>
-                <input
-                  type="range"
-                  min="500"
-                  max="25000"
-                  step="500"
-                  value={simLux}
-                  onChange={(e) => setSimLux(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-            </div>
-          ) : (
-            /* SOIL SIMULATOR SLIDERS */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Soil Moisture: <span className="font-bold text-indigo-600">{simMoisture}%</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={simMoisture}
-                  onChange={(e) => setSimMoisture(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Water Tank: <span className="font-bold text-indigo-600">{simTank}%</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={simTank}
-                  onChange={(e) => setSimTank(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Temp: <span className="font-bold text-indigo-600">{simTemp}°C</span>
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="45"
-                  value={simTemp}
-                  onChange={(e) => setSimTemp(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Humidity: <span className="font-bold text-indigo-600">{simHumidity}%</span>
-                </label>
-                <input
-                  type="range"
-                  min="10"
-                  max="95"
-                  value={simHumidity}
-                  onChange={(e) => setSimHumidity(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-1">
-                  Sunlight: <span className="font-bold text-indigo-600">{simLux} lux</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="5000"
-                  step="50"
-                  value={simLux}
-                  onChange={(e) => setSimLux(Number(e.target.value))}
-                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-xs text-indigo-700 dark:text-indigo-300">
-              Publishing telemetry for <strong className="font-mono text-indigo-900 dark:text-indigo-100">&quot;{selectedDeviceId}&quot;</strong> ({simMode} mode).
-            </p>
-            <button
-              onClick={handleManualPush}
-              disabled={isPushing}
-              className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isPushing ? "animate-spin" : ""}`} />
-              <span>{isPushing ? "Publishing..." : "Push Single Frame"}</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

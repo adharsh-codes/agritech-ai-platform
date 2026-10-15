@@ -128,3 +128,24 @@
     @apply font-sans;
   }
 }
+
+/* Clear, friendly type for the farmer workspace. */
+.farmer-module {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-weight: 500;
+}
+
+.farmer-module [class~="text-xs"],
+.farmer-module [class~="text-[10px]"],
+.farmer-module [class~="text-[11px]"] {
+  font-size: 0.875rem !important;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.farmer-module h1,
+.farmer-module h2,
+.farmer-module h3,
+.farmer-module h4 {
+  font-weight: 700;
+}

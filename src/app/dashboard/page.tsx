@@ -12,7 +12,6 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import WeatherCard from "@/components/dashboard/WeatherCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import LiveCameraMonitoring from "@/components/dashboard/LiveCameraMonitoring";
-import HardwareTelemetryPanel from "@/components/dashboard/HardwareTelemetryPanel";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -66,9 +65,6 @@ export default function Dashboard() {
         <h1 className="text-4xl font-bold">
           {greeting}, {profile?.name || "Farmer"} 🌱
         </h1>
-        <p className="text-gray-500">
-          Welcome back to your AI Farming Assistant.
-        </p>
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -93,9 +89,6 @@ export default function Dashboard() {
           icon={Brain}
         />
       </div>
-
-      {/* Hardware Telemetry (ESP32 Data Pipeline) */}
-      <HardwareTelemetryPanel />
 
       {/* Live Camera Monitoring Section */}
       <LiveCameraMonitoring />

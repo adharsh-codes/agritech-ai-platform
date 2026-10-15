@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/common/LanguageContext";
 import { Droplets, Activity, ThermometerSun, Zap, Waves, FlaskConical } from "lucide-react";
 import StatCard from "@/components/dashboard/StatCard";
-import HardwareTelemetryPanel from "@/components/dashboard/HardwareTelemetryPanel";
 import { iotService } from "@/services/iotService";
 import { IotTelemetryData, deriveDeviceStatus, derivePhStatus, deriveEcStatus, deriveWaterLevelStatus } from "@/types/iot";
 
@@ -43,9 +42,6 @@ export default function HydroponicsPage() {
             </span>
             {t("hydroponics")} Smart Monitoring
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            Real-time hydroponics telemetry dashboard. Monitor nutrient solution pH balance, electrical conductivity (EC), water temperature, and reservoir levels.
-          </p>
         </div>
 
         {/* Live Hydroponics Connection Badge */}
@@ -103,9 +99,6 @@ export default function HydroponicsPage() {
         />
       </div>
 
-      {/* Hardware Telemetry Panel with Simulator & Gauges */}
-      <HardwareTelemetryPanel />
-
       {/* Hydroponic Parameter Optimal Reference Guide Card */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
         <div className="flex items-center gap-3">
@@ -116,9 +109,6 @@ export default function HydroponicsPage() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Hydroponics Target Operating Ranges
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Optimal thresholds for leafy greens, herbs, and hydroponic vegetables
-            </p>
           </div>
         </div>
 
@@ -126,25 +116,21 @@ export default function HydroponicsPage() {
           <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-700">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 block">Optimal pH Range</span>
             <span className="text-lg font-bold text-purple-600 dark:text-purple-400">5.5 – 6.5 pH</span>
-            <p className="text-[11px] text-gray-400 mt-1">Ensures maximum nutrient solubility and uptake</p>
           </div>
 
           <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-700">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 block">Target EC Concentration</span>
             <span className="text-lg font-bold text-amber-600 dark:text-amber-400">1.2 – 2.0 mS/cm</span>
-            <p className="text-[11px] text-gray-400 mt-1">Balanced N-P-K mineral salt concentration</p>
           </div>
 
           <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-700">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 block">Water Temperature</span>
             <span className="text-lg font-bold text-blue-600 dark:text-blue-400">18 – 24°C</span>
-            <p className="text-[11px] text-gray-400 mt-1">Prevents root rot & maintains dissolved oxygen</p>
           </div>
 
           <div className="p-3.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-100 dark:border-gray-700">
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 block">Minimum Water Level</span>
             <span className="text-lg font-bold text-cyan-600 dark:text-cyan-400">&gt; 35%</span>
-            <p className="text-[11px] text-gray-400 mt-1">Prevents submersible pump dry-running</p>
           </div>
         </div>
       </div>

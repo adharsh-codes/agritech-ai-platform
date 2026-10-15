@@ -2,12 +2,10 @@ import {
   collection, 
   doc, 
   onSnapshot, 
-  setDoc, 
   getDoc,
   getDocs 
 } from "firebase/firestore";
-import { signInAnonymously } from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { 
   IotTelemetryData, 
   FarmingMode,
@@ -21,15 +19,6 @@ const COLLECTION_NAME = "iot_telemetry";
 
 // In-memory fallback cache for server-side API routes or offline resilience
 const inMemoryStore = new Map<string, IotTelemetryData>();
-
-async function ensureAuth() {
-  if (typeof window !== "undefined" || auth.currentUser) return;
-  try {
-    await signInAnonymously(auth);
-  } catch (e) {
-    // Silent catch if anonymous auth is not configured in Firebase console
-  }
-}
 
 /**
  * Sanitizes and validates IoT Telemetry payload values for Soil and Hydroponics modes.
@@ -140,7 +129,6 @@ export const iotService = {
       return () => {};
     }
 
-    ensureAuth();
     const docRef = doc(db, COLLECTION_NAME, deviceId);
     
     const unsubscribe = onSnapshot(
@@ -155,7 +143,12 @@ export const iotService = {
         }
       },
       (error) => {
-        console.warn(`Firestore snapshot warning for ${deviceId}:`, error.message);
+        console.warn("[telemetry] Firestore document listener failed", JSON.stringify({
+          projectId: db.app.options.projectId ?? "unknown",
+          collection: COLLECTION_NAME,
+          deviceId,
+          errorCode: error.code || "unknown",
+        }));
         callback(inMemoryStore.get(deviceId) || null);
       }
     );
@@ -169,7 +162,6 @@ export const iotService = {
   subscribeToAllTelemetry(
     callback: (devices: IotTelemetryData[]) => void
   ): () => void {
-    ensureAuth();
     const colRef = collection(db, COLLECTION_NAME);
 
     const unsubscribe = onSnapshot(
@@ -186,7 +178,11 @@ export const iotService = {
         callback(list.length > 0 ? list : Array.from(inMemoryStore.values()));
       },
       (error) => {
-        console.warn("Firestore snapshot all telemetry warning:", error.message);
+        console.warn("[telemetry] Firestore collection listener failed", JSON.stringify({
+          projectId: db.app.options.projectId ?? "unknown",
+          collection: COLLECTION_NAME,
+          errorCode: error.code || "unknown",
+        }));
         callback(Array.from(inMemoryStore.values()));
       }
     );
@@ -195,68 +191,10 @@ export const iotService = {
   },
 
   /**
-   * Publishes telemetry data into Firestore (`iot_telemetry/{deviceId}`)
-   */
-  async publishTelemetry(data: Partial<IotTelemetryData>): Promise<IotTelemetryData> {
-    const sanitized = sanitizeTelemetryPayload(data);
-    inMemoryStore.set(sanitized.deviceId, sanitized);
-
-    try {
-      await ensureAuth();
-      const docRef = doc(db, COLLECTION_NAME, sanitized.deviceId);
-      await setDoc(docRef, sanitized, { merge: true });
-    } catch (err: any) {
-      console.warn(`Firestore setDoc fallback for ${sanitized.deviceId}:`, err?.message || String(err));
-    }
-
-    return sanitized;
-  },
-
-  /**
-   * Helper function for ESP32 simulation pushes (supports soil and hydroponics)
-   */
-  async simulateTelemetryPush(
-    deviceId: string = "esp32_zone_01", 
-    data?: Partial<IotTelemetryData>
-  ): Promise<IotTelemetryData> {
-    const isHydro = data?.farmingMode === "hydroponics" || deviceId.toLowerCase().includes("hydro");
-
-    const payload: Partial<IotTelemetryData> = isHydro ? {
-      deviceId,
-      farmingMode: "hydroponics",
-      ph: data?.ph ?? Math.round((5.8 + Math.random() * 0.8) * 10) / 10,
-      ec: data?.ec ?? Math.round((1.2 + Math.random() * 0.6) * 10) / 10,
-      tds: data?.tds ?? Math.floor(650 + Math.random() * 250),
-      waterTemperature: data?.waterTemperature ?? Math.round((21 + Math.random() * 4) * 10) / 10,
-      waterLevel: data?.waterLevel ?? Math.floor(75 + Math.random() * 20),
-      temperature: data?.temperature ?? Math.floor(25 + Math.random() * 6),
-      humidity: data?.humidity ?? Math.floor(55 + Math.random() * 20),
-      lightLux: data?.lightLux ?? Math.floor(8000 + Math.random() * 6000),
-      status: "simulated",
-      timestamp: new Date().toISOString(),
-      ...data
-    } : {
-      deviceId,
-      farmingMode: "soil",
-      soilMoisture: data?.soilMoisture ?? Math.floor(40 + Math.random() * 30),
-      waterTankLevel: data?.waterTankLevel ?? Math.floor(70 + Math.random() * 25),
-      temperature: data?.temperature ?? Math.floor(24 + Math.random() * 8),
-      humidity: data?.humidity ?? Math.floor(55 + Math.random() * 20),
-      lightLux: data?.lightLux ?? Math.floor(800 + Math.random() * 800),
-      status: "simulated",
-      timestamp: new Date().toISOString(),
-      ...data
-    };
-
-    return await this.publishTelemetry(payload);
-  },
-
-  /**
    * Fetch one-off latest telemetry for a device
    */
   async getTelemetry(deviceId: string): Promise<IotTelemetryData | null> {
     try {
-      await ensureAuth();
       const docRef = doc(db, COLLECTION_NAME, deviceId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
@@ -264,8 +202,8 @@ export const iotService = {
         inMemoryStore.set(deviceId, data);
         return data;
       }
-    } catch (err: any) {
-      console.warn(`Firestore getDoc fallback for ${deviceId}:`, err?.message || String(err));
+    } catch (err: unknown) {
+      console.warn(`Firestore getDoc fallback for ${deviceId}:`, err instanceof Error ? err.message : String(err));
     }
 
     return inMemoryStore.get(deviceId) || null;
@@ -277,7 +215,6 @@ export const iotService = {
   async getAllTelemetry(): Promise<IotTelemetryData[]> {
     const list: IotTelemetryData[] = [];
     try {
-      await ensureAuth();
       const colRef = collection(db, COLLECTION_NAME);
       const querySnap = await getDocs(colRef);
       querySnap.forEach((docSnap) => {
@@ -287,8 +224,8 @@ export const iotService = {
           inMemoryStore.set(d.deviceId, d);
         }
       });
-    } catch (err: any) {
-      console.warn("Firestore getDocs fallback for all telemetry:", err?.message || String(err));
+    } catch (err: unknown) {
+      console.warn("Firestore getDocs fallback for all telemetry:", err instanceof Error ? err.message : String(err));
     }
 
     if (list.length === 0) {

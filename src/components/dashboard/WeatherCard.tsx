@@ -46,7 +46,7 @@ export default function WeatherCard() {
   if (loading) {
     return (
       <Card className="rounded-2xl shadow-md min-h-[220px] flex items-center justify-center bg-white border border-gray-100">
-        <p className="text-gray-400 text-sm animate-pulse">Loading weather forecast...</p>
+          <p className="text-gray-600 text-base font-semibold animate-pulse">Loading weather</p>
       </Card>
     );
   }
@@ -85,25 +85,25 @@ export default function WeatherCard() {
         <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-100 text-sm">
           <div className="flex flex-col items-center text-center">
             <Droplets className="text-blue-500 mb-1" size={20} />
-            <span className="text-xs text-gray-400 font-medium">Humidity</span>
+            <span className="text-sm text-gray-600 font-semibold">Humidity</span>
             <span className="font-bold text-gray-700 mt-0.5">{weather.humidity}%</span>
           </div>
 
           <div className="flex flex-col items-center text-center">
             <CloudSun className="text-indigo-500 mb-1" size={20} />
-            <span className="text-xs text-gray-400 font-medium">Rain Prob.</span>
+            <span className="text-sm text-gray-600 font-semibold">Rain</span>
             <span className="font-bold text-gray-700 mt-0.5">{weather.rainProbability}%</span>
           </div>
 
           <div className="flex flex-col items-center text-center">
             <Wind className="text-green-600 mb-1" size={20} />
-            <span className="text-xs text-gray-400 font-medium">Wind</span>
+          <span className="text-sm text-gray-600 font-semibold">Wind</span>
             <span className="font-bold text-gray-700 mt-0.5">{weather.windSpeed} km/h</span>
           </div>
         </div>
 
-        <div className="text-right mt-6 text-[10px] text-gray-400 font-medium">
-          Last Updated: {formatLastUpdated(weather.timestamp)}
+        <div className="text-right mt-6 text-sm text-gray-600 font-semibold">
+          Updated {formatLastUpdated(weather.timestamp)}
         </div>
       </CardContent>
     </Card>
